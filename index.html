@@ -225,6 +225,14 @@ body{font-family:var(--font);background:var(--bg-base);color:var(--text-1);min-h
 
 /* ===== ADMIN BADGE ===== */
 .admin-tag{display:inline-flex;align-items:center;gap:4px;background:rgba(255,154,60,.15);border:1px solid rgba(255,154,60,.4);color:var(--orange);border-radius:20px;font-size:10px;font-weight:700;padding:2px 8px}
+/* ===== SERVICE TABS ===== */
+.svc-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:16px;flex-wrap:wrap}
+.svc-tab{background:none;border:none;border-bottom:2px solid transparent;color:var(--text-2);padding:10px 16px;cursor:pointer;font-size:13px;font-family:var(--font);font-weight:600;transition:all .15s;margin-bottom:-1px}
+.svc-tab:hover{color:var(--text-1)}
+.svc-tab.active{color:var(--cyan);border-bottom-color:var(--cyan)}
+.svc-tab-panel{display:none}.svc-tab-panel.active{display:block}
+/* quick form grid */
+.quick-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:12px}
 /* ===== ADMIN TABS ===== */
 .admin-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:16px;flex-wrap:wrap}
 .admin-tab{background:none;border:none;border-bottom:2px solid transparent;color:var(--text-2);padding:10px 16px;cursor:pointer;font-size:13px;font-family:var(--font);font-weight:600;transition:all .15s;margin-bottom:-1px}
@@ -446,13 +454,132 @@ body{font-family:var(--font);background:var(--bg-base);color:var(--text-1);min-h
 
 <!-- ======== PAGE 2: บันทึกให้บริการ ======== -->
 <div class="page" id="page-service">
-  <div class="page-header"><h1>✏️ บันทึกให้บริการ</h1><p>เลือกรายการเพื่อบันทึกผล — รายการ pending และกำลังดำเนินการ</p></div>
-  <div class="card">
-    <div class="card-title">
-      <div class="card-title-l">รายการรอดำเนินการ</div>
-      <button class="btn btn-outline btn-sm" onclick="loadPendingList()">🔄 รีเฟรช</button>
+  <div class="page-header"><h1>✏️ บันทึกให้บริการ</h1><p>เลือกจากรายการ หรือบันทึกด่วนได้เลย</p></div>
+
+  <div class="svc-tabs">
+    <button class="svc-tab active" onclick="switchSvcTab('list',this)">📋 จากรายการคำร้อง</button>
+    <button class="svc-tab" onclick="switchSvcTab('quick',this)">⚡ บันทึกด่วน (จบในหน้าเดียว)</button>
+  </div>
+
+  <!-- TAB: รายการคำร้อง -->
+  <div class="svc-tab-panel active" id="stab-list">
+    <div class="card">
+      <div class="card-title">
+        <div class="card-title-l">รายการรอดำเนินการ</div>
+        <button class="btn btn-outline btn-sm" onclick="loadPendingList()">🔄 รีเฟรช</button>
+      </div>
+      <div id="pending-list-wrap"><div class="empty-state"><div class="spinner"></div><p>กำลังโหลด...</p></div></div>
     </div>
-    <div id="pending-list-wrap"><div class="empty-state"><div class="spinner"></div><p>กำลังโหลด...</p></div></div>
+  </div>
+
+  <!-- TAB: บันทึกด่วน -->
+  <div class="svc-tab-panel" id="stab-quick">
+    <div class="card">
+      <div class="card-title"><div class="card-title-l">⚡ บันทึกการให้บริการด่วน</div></div>
+      <p style="font-size:13px;color:var(--text-2);margin-bottom:16px">กรอกและบันทึกได้เลย ไม่ต้องมีคำร้องก่อน — ระบบจะสร้างรายการใหม่พร้อมสถานะ "เสร็จสิ้น" ทันที</p>
+
+      <!-- ข้อมูลผู้แจ้ง -->
+      <div style="background:rgba(88,166,255,.05);border:1px solid rgba(88,166,255,.2);border-radius:var(--radius);padding:14px;margin-bottom:14px">
+        <div style="font-size:11px;font-weight:700;color:var(--cyan);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">📋 ข้อมูลผู้แจ้ง</div>
+        <div class="form-row c3">
+          <div class="form-group">
+            <label class="form-label">วันที่แจ้ง <span class="req">*</span></label>
+            <input type="date" class="form-input" id="q-date">
+          </div>
+          <div class="form-group">
+            <label class="form-label">ผู้แจ้ง <span class="req">*</span></label>
+            <input type="text" class="form-input" id="q-name" placeholder="ชื่อ-นามสกุล">
+          </div>
+          <div class="form-group">
+            <label class="form-label">แผนก <span class="req">*</span></label>
+            <select class="form-select" id="q-dept">
+              <option value="">-- เลือกแผนก --</option>
+              <optgroup label="🏢 อาคาร 100 ปี"><option>100/9</option><option>100/8</option><option>100/7</option><option>100/6</option></optgroup>
+              <optgroup label="🏢 อาคาร 80 พรรษา"><option>80/10</option><option>80/9</option><option>80/8</option><option>ศช</option><option>ศญ</option><option>80/5</option><option>OR สูติ</option><option>OR ตา</option><option>PICU</option><option>80/2</option><option>80/1</option></optgroup>
+              <optgroup label="🏢 อาคาร 14 ชั้น (ทศมบพิตร)"><option>14/9</option><option>14/8</option><option>14/7</option><option>อญ</option><option>อช</option><option>ห้องเคมีบำบัด</option></optgroup>
+              <optgroup label="🏢 อาคารเชิดบุญเมือง"><option>MICU</option></optgroup>
+              <optgroup label="🏢 อาคารผู้ป่วยนอก"><option>ER</option><option>OPD โรคเลือด</option><option>OPD ทันตกรรม</option><option>OPD ทางเดินอาหาร</option><option>OPD ทางเดินหายใจ</option><option>เวรแปล</option><option>OPD อายุรกรรม</option></optgroup>
+              <optgroup label="🏢 อาคารพิเคราะห์และบำบัดโรค"><option>CICU</option><option>SICU</option><option>OPD ENT</option><option>OPD ตา</option><option>OPD กระดูก</option><option>OPD ศัยกรรม</option><option>รังสี</option><option>HBO</option><option>OPD จักษุ</option><option>OPD นรีเวชกรรม</option><option>OPD กุมาร</option><option>ห้องตรวจ พิเศษศัลย์ ฯ</option><option>OR ศัลย์</option><option>OR ENT</option><option>แผนกไตเทียม</option><option>Cath lab</option><option>ศูนย์สมอง</option></optgroup>
+              <option value="other">อื่นๆ (ระบุ)</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row c1" id="q-dept-other-row" style="display:none">
+          <div class="form-group">
+            <label class="form-label">ระบุแผนก</label>
+            <input type="text" class="form-input" id="q-dept-other" placeholder="ระบุชื่อแผนก...">
+          </div>
+        </div>
+      </div>
+
+      <!-- รายการบริการ (แบบย่อ checkbox + จำนวน) -->
+      <div style="background:rgba(88,166,255,.05);border:1px solid rgba(88,166,255,.2);border-radius:var(--radius);padding:14px;margin-bottom:14px">
+        <div style="font-size:11px;font-weight:700;color:var(--cyan);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">📦 รายการที่ให้บริการ</div>
+        <div class="quick-grid" id="quick-items-grid">
+          <!-- O2 -->
+          <div class="form-group"><label class="form-label" style="text-transform:none;font-size:12px">O₂ 0.5Q</label><input type="number" class="form-input" id="q-o2-05q" min="0" value="0" style="padding:6px 8px"></div>
+          <div class="form-group"><label class="form-label" style="text-transform:none;font-size:12px">O₂ 0.7Q</label><input type="number" class="form-input" id="q-o2-07q" min="0" value="0" style="padding:6px 8px"></div>
+          <div class="form-group"><label class="form-label" style="text-transform:none;font-size:12px">O₂ 1.5Q</label><input type="number" class="form-input" id="q-o2-15q" min="0" value="0" style="padding:6px 8px"></div>
+          <div class="form-group"><label class="form-label" style="text-transform:none;font-size:12px">O₂ 6Q</label><input type="number" class="form-input" id="q-o2-6q" min="0" value="0" style="padding:6px 8px"></div>
+          <div class="form-group"><label class="form-label" style="text-transform:none;font-size:12px">O₂ 7Q</label><input type="number" class="form-input" id="q-o2-7q" min="0" value="0" style="padding:6px 8px"></div>
+          <div class="form-group"><label class="form-label" style="text-transform:none;font-size:12px">CO₂ 6Kg</label><input type="number" class="form-input" id="q-co2-6kg" min="0" value="0" style="padding:6px 8px"></div>
+          <div class="form-group"><label class="form-label" style="text-transform:none;font-size:12px">CO₂ 25Kg</label><input type="number" class="form-input" id="q-co2-25kg" min="0" value="0" style="padding:6px 8px"></div>
+          <div class="form-group"><label class="form-label" style="text-transform:none;font-size:12px">N₂O 25Kg</label><input type="number" class="form-input" id="q-n2o-25kg" min="0" value="0" style="padding:6px 8px"></div>
+          <div class="form-group"><label class="form-label" style="text-transform:none;font-size:12px">N₂ 7Q</label><input type="number" class="form-input" id="q-n2-7q" min="0" value="0" style="padding:6px 8px"></div>
+          <div class="form-group"><label class="form-label" style="text-transform:none;font-size:12px">Flowmeter</label><input type="number" class="form-input" id="q-flowmeter" min="0" value="0" style="padding:6px 8px"></div>
+          <div class="form-group"><label class="form-label" style="text-transform:none;font-size:12px">Flowmeter+PTO</label><input type="number" class="form-input" id="q-flowmeter-pto" min="0" value="0" style="padding:6px 8px"></div>
+        </div>
+        <!-- ซ่อม pipeline -->
+        <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:4px">
+          <div style="font-size:11px;color:var(--text-3);margin-bottom:8px">แจ้งซ่อม Pipeline</div>
+          <div style="display:flex;flex-wrap:wrap;gap:10px">
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" class="custom-check" id="q-repair-air"> Medical Air</label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" class="custom-check" id="q-repair-o2"> Medical Oxygen</label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" class="custom-check" id="q-repair-vac"> Medical Vacuum</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- ข้อมูลการให้บริการ -->
+      <div style="background:rgba(63,185,80,.05);border:1px solid rgba(63,185,80,.2);border-radius:var(--radius);padding:14px;margin-bottom:14px">
+        <div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">⚙️ ผลการให้บริการ</div>
+        <div class="form-row c2">
+          <div class="form-group">
+            <label class="form-label">ผู้ให้บริการ (ช่าง) <span class="req">*</span></label>
+            <input type="text" class="form-input" id="q-tech" placeholder="พิมพ์หรือเลือกชื่อช่าง..." list="tech-datalist">
+          </div>
+          <div class="form-group">
+            <label class="form-label">สถานะ</label>
+            <select class="form-select" id="q-status">
+              <option value="done">🟢 เสร็จสิ้น</option>
+              <option value="in_progress">🔵 กำลังดำเนินการ</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row c2">
+          <div class="form-group">
+            <label class="form-label">เวลาเริ่ม</label>
+            <input type="datetime-local" class="form-input" id="q-start">
+          </div>
+          <div class="form-group">
+            <label class="form-label">เวลาเสร็จ</label>
+            <input type="datetime-local" class="form-input" id="q-end">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">หมายเหตุ <span style="font-weight:400;text-transform:none;color:var(--text-3)">(ให้ลงรายละเอียดการซ่อม/เรื่องอื่น)</span></label>
+          <textarea class="form-textarea" id="q-note" rows="2" placeholder="บันทึกรายละเอียด..."></textarea>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-outline" onclick="resetQuickForm()">ล้างข้อมูล</button>
+        <button class="btn btn-success" onclick="requireSvcPin('ยืนยันบันทึกด่วน', submitQuickForm)" id="btn-quick-submit">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          บันทึกด่วน
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- FULL EDIT FORM (ใบแจ้ง + ใบบันทึก รวม) -->
@@ -1969,6 +2096,124 @@ function initTheme() {
   const saved = localStorage.getItem(THEME_KEY);
   applyTheme(saved || 'dark');
 }
+
+// ===== SERVICE TAB =====
+function switchSvcTab(tab, btn) {
+  document.querySelectorAll('.svc-tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.svc-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('stab-' + tab).classList.add('active');
+  btn.classList.add('active');
+  if (tab === 'list')  loadPendingList();
+  if (tab === 'quick') initQuickForm();
+}
+
+function initQuickForm() {
+  const d = new Date();
+  const p = n => String(n).padStart(2,'0');
+  const dateStr = `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
+  const dtStr   = `${dateStr}T${p(d.getHours())}:${p(d.getMinutes())}`;
+  const dateEl = document.getElementById('q-date');
+  if (dateEl && !dateEl.value) dateEl.value = dateStr;
+  const startEl = document.getElementById('q-start');
+  if (startEl && !startEl.value) startEl.value = dtStr;
+}
+
+function resetQuickForm() {
+  const ids = ['q-name','q-note','q-tech','q-dept-other','q-end'];
+  ids.forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  const nums = ['q-o2-05q','q-o2-07q','q-o2-15q','q-o2-6q','q-o2-7q',
+                'q-co2-6kg','q-co2-25kg','q-n2o-25kg','q-n2-7q','q-flowmeter','q-flowmeter-pto'];
+  nums.forEach(id => { const el=document.getElementById(id); if(el) el.value=0; });
+  ['q-repair-air','q-repair-o2','q-repair-vac'].forEach(id => {
+    const el=document.getElementById(id); if(el) el.checked=false;
+  });
+  const deptEl = document.getElementById('q-dept'); if(deptEl) deptEl.value='';
+  const statusEl = document.getElementById('q-status'); if(statusEl) statusEl.value='done';
+  document.getElementById('q-dept-other-row').style.display='none';
+  initQuickForm();
+}
+
+async function submitQuickForm() {
+  const date  = document.getElementById('q-date').value;
+  const name  = document.getElementById('q-name').value.trim();
+  const dept  = document.getElementById('q-dept').value;
+  const tech  = document.getElementById('q-tech').value.trim();
+  if (!date)  { toast('กรุณาระบุวันที่','error'); return; }
+  if (!name)  { toast('กรุณาระบุชื่อผู้แจ้ง','error'); return; }
+  if (!dept)  { toast('กรุณาเลือกแผนก','error'); return; }
+  if (!tech)  { toast('กรุณาระบุชื่อช่าง','error'); return; }
+
+  const btn = document.getElementById('btn-quick-submit');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner" style="width:13px;height:13px"></div> กำลังบันทึก...';
+
+  const g = id => +document.getElementById(id)?.value || 0;
+  const gc = id => document.getElementById(id)?.checked || false;
+  const deptOther = dept === 'other' ? document.getElementById('q-dept-other').value.trim() : null;
+  const startVal  = document.getElementById('q-start').value || null;
+  const endVal    = document.getElementById('q-end').value   || null;
+  const noteVal   = document.getElementById('q-note').value.trim() || null;
+  const statusVal = document.getElementById('q-status').value;
+
+  const row = {
+    request_date:    date,
+    requester_name:  name,
+    department:      dept === 'other' ? 'อื่นๆ' : dept,
+    department_other: deptOther,
+    status:          statusVal,
+    note_request:    null,
+    // รายการที่ให้บริการ
+    o2_05q:  g('q-o2-05q'), o2_07q: g('q-o2-07q'), o2_15q: g('q-o2-15q'),
+    o2_6q:   g('q-o2-6q'),  o2_7q:  g('q-o2-7q'),
+    co2_6kg: g('q-co2-6kg'), co2_25kg: g('q-co2-25kg'),
+    n2o_25kg: g('q-n2o-25kg'), n2_7q: g('q-n2-7q'),
+    loan_flowmeter: g('q-flowmeter'), loan_flowmeter_pto: g('q-flowmeter-pto'),
+    repair_medical_air: gc('q-repair-air'),
+    repair_oxygen:      gc('q-repair-o2'),
+    repair_vacuum:      gc('q-repair-vac'),
+    // ผลบริการ (actual = requested เพราะบันทึกด่วน)
+    technician_name:  tech,
+    service_start_at: startVal,
+    service_end_at:   endVal,
+    note_service:     noteVal,
+    actual_o2_05q:  g('q-o2-05q'), actual_o2_07q: g('q-o2-07q'), actual_o2_15q: g('q-o2-15q'),
+    actual_o2_6q:   g('q-o2-6q'),  actual_o2_7q:  g('q-o2-7q'),
+    actual_co2_6kg: g('q-co2-6kg'), actual_co2_25kg: g('q-co2-25kg'),
+    actual_n2o_25kg: g('q-n2o-25kg'), actual_n2_7q: g('q-n2-7q'),
+    actual_loan_flowmeter: g('q-flowmeter'), actual_loan_flowmeter_pto: g('q-flowmeter-pto'),
+  };
+
+  // ตรวจว่ามีรายการอย่างน้อย 1
+  const hasItem = ['o2_05q','o2_07q','o2_15q','o2_6q','o2_7q','co2_6kg','co2_25kg',
+    'n2o_25kg','n2_7q','loan_flowmeter','loan_flowmeter_pto'].some(k => row[k] > 0)
+    || row.repair_medical_air || row.repair_oxygen || row.repair_vacuum;
+  if (!hasItem) {
+    toast('กรุณาระบุรายการที่ให้บริการอย่างน้อย 1 รายการ','error');
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> บันทึกด่วน';
+    return;
+  }
+
+  try {
+    await supaFetch('POST','',row);
+    toast('บันทึกด่วนเสร็จสิ้น ✅','success');
+    resetQuickForm();
+  } catch(e) {
+    toast('บันทึกไม่สำเร็จ: '+e.message,'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> บันทึกด่วน';
+  }
+}
+
+// dept toggle สำหรับ quick form
+document.addEventListener('DOMContentLoaded', () => {
+  const qDept = document.getElementById('q-dept');
+  if (qDept) qDept.addEventListener('change', function() {
+    const row = document.getElementById('q-dept-other-row');
+    row.style.display = this.value === 'other' ? '' : 'none';
+  });
+});
 
 // ===== SUPABASE KEEPALIVE (ป้องกัน project pause) =====
 // Supabase Free tier pause หลัง 7 วันไม่มี activity
