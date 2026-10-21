@@ -295,6 +295,21 @@ body{font-family:var(--font);background:var(--bg-base);color:var(--text-1);min-h
   .btn{justify-content:center}
   .filter-grid{grid-template-columns:1fr}
 }
+/* ===== Responsive เพิ่มเติม (มือถือ/แท็บเล็ต) ===== */
+.chart-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px}
+@media(max-width:900px){.chart-grid-3{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.chart-grid-3{grid-template-columns:1fr}}
+@media(max-width:768px){
+  .topbar-user{display:none}
+  .topbar-logout{font-size:0;padding:7px 10px}
+  .topbar-logout svg{width:14px;height:14px}
+  .topbar-nav{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .topbar-nav::-webkit-scrollbar{display:none}
+  .nav-btn{padding:8px 12px;flex-shrink:0}
+  /* กัน iOS Safari ซูมอัตโนมัติเมื่อแตะช่องกรอก (ต้อง >= 16px) */
+  input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea{font-size:16px}
+}
+@media(pointer:coarse){.preset-btn,.btn-sm{min-height:34px}}
 </style>
 </head>
 <body>
@@ -379,7 +394,7 @@ body{font-family:var(--font);background:var(--bg-base);color:var(--text-1);min-h
   </div>
   <span class="topbar-user" id="topbar-user"></span>
   <button class="theme-toggle" onclick="toggleTheme()" id="theme-toggle-btn" title="เปลี่ยน Light/Dark">🌙</button>
-  <button class="topbar-logout" onclick="doLogout()">
+  <button class="topbar-logout" onclick="doLogout()" title="ออกจากระบบ" aria-label="ออกจากระบบ">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
     ออกจากระบบ
   </button>
@@ -903,7 +918,7 @@ body{font-family:var(--font);background:var(--bg-base);color:var(--text-1);min-h
   </div>
 
   <!-- chart grid ขยายเป็น 3 คอลัมน์ -->
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px" id="dash-charts-top">
+  <div class="chart-grid-3" id="dash-charts-top">
     <div class="chart-card" style="grid-column:span 1"><h3>📦 แลกท่อ O₂ (จำนวนถัง)</h3><div class="bar-list" id="dash-o2-bars"><div style="color:var(--text-3);font-size:12px">กำลังโหลด...</div></div></div>
     <div class="chart-card" style="grid-column:span 1"><h3>🧪 แลกท่อแก๊สชนิดอื่น</h3><div class="bar-list" id="dash-gas-bars"><div style="color:var(--text-3);font-size:12px">กำลังโหลด...</div></div></div>
     <div class="chart-card" style="grid-column:span 1"><h3>🛠️ ยืมอุปกรณ์</h3><div class="bar-list" id="dash-loan-bars"><div style="color:var(--text-3);font-size:12px">กำลังโหลด...</div></div></div>
@@ -1325,6 +1340,7 @@ function showPage(id) {
   if (id === 'history')   { setDatePreset('month','hist'); loadHistory(); }
   if (id === 'dashboard') { setDatePreset('month','dash'); loadDashboard(); }
   refreshOverdueBadge();
+  try { document.getElementById('nav-' + id).scrollIntoView({inline:'center', block:'nearest'}); } catch(e) {}
 }
 
 // ===== TOAST =====
