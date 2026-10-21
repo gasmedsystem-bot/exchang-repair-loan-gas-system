@@ -213,6 +213,21 @@ body{font-family:var(--font);background:var(--bg-base);color:var(--text-1);min-h
 .bar-fill.g{background:var(--green)}.bar-fill.y{background:var(--yellow)}
 .bar-fill.r{background:var(--red)}.bar-fill.p{background:var(--purple)}
 .bar-fill.o{background:var(--orange)}
+/* ===== Dashboard extras ===== */
+.col-chart{display:flex;align-items:flex-end;gap:6px;overflow-x:auto;padding-bottom:2px;min-height:130px}
+.col-chart .col{flex:1 0 26px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;font-size:10px;color:var(--text-3)}
+.col-chart .col .v{font-weight:700;color:var(--text-1);margin-bottom:2px;min-height:12px}
+.col-chart .col .b{width:100%;max-width:34px;background:var(--accent);border-radius:4px 4px 0 0}
+.col-chart .col .l{margin-top:4px;white-space:nowrap}
+.dx-table{width:100%;border-collapse:collapse;font-size:12px}
+.dx-table th{text-align:left;color:var(--text-3);font-weight:700;padding:4px 6px;border-bottom:1px solid var(--border)}
+.dx-table td{padding:5px 6px;border-bottom:1px solid var(--border);color:var(--text-1)}
+.dx-table th:not(:first-child),.dx-table td:not(:first-child){text-align:right}
+.dx-note{font-size:11px;color:var(--text-3);margin-top:8px}
+.dx-ring{height:6px;background:var(--bg-base);border-radius:4px;margin-top:8px;overflow:hidden}
+.nav-badge{display:inline-block;background:var(--red);color:#fff;border-radius:10px;font-size:10px;font-weight:700;padding:1px 6px;margin-left:5px;line-height:1.4}
+.nav-badge.hidden{display:none}
+.dx-ring>div{height:100%;background:var(--green);width:0;transition:width .4s}
 
 /* ===== DETAIL PANEL ===== */
 .detail-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:3000;display:flex;align-items:flex-start;justify-content:flex-end;backdrop-filter:blur(2px)}
@@ -357,7 +372,7 @@ body{font-family:var(--font);background:var(--bg-base);color:var(--text-1);min-h
   </div>
   <div class="topbar-nav">
     <button class="nav-btn active" onclick="showPage('request')" id="nav-request">📋 แจ้งขอรับบริการ</button>
-    <button class="nav-btn" onclick="showPage('service')" id="nav-service">✏️ บันทึกให้บริการ</button>
+    <button class="nav-btn" onclick="showPage('service')" id="nav-service">✏️ บันทึกให้บริการ<span class="nav-badge hidden" id="nav-overdue" title="งานค้างเกิน 3 วัน"></span></button>
     <button class="nav-btn" onclick="showPage('history')" id="nav-history">🕐 ประวัติ</button>
     <button class="nav-btn" onclick="showPage('dashboard')" id="nav-dashboard">📊 Dashboard</button>
     <button class="nav-btn admin-btn" onclick="requireAdminPin()" id="nav-admin">🛡️ Admin</button>
@@ -867,11 +882,24 @@ body{font-family:var(--font);background:var(--bg-base);color:var(--text-1);min-h
     </div>
   </div>
 
+  <div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-outline btn-sm" style="margin-right:8px" onclick="printDashboard()">🖨️ พิมพ์รายงาน</button><button class="btn btn-outline btn-sm" onclick="exportDashCSV()">⬇️ Export CSV (ตามตัวกรอง)</button></div>
   <div class="stat-grid">
     <div class="stat-card yellow"><div class="lbl">รอดำเนินการ</div><div class="val" id="d-pending">—</div><div class="sub">รายการ</div></div>
     <div class="stat-card blue"><div class="lbl">กำลังดำเนินการ</div><div class="val" id="d-inprog">—</div><div class="sub">รายการ</div></div>
     <div class="stat-card green"><div class="lbl">เสร็จสิ้น</div><div class="val" id="d-done">—</div><div class="sub">รายการ</div></div>
     <div class="stat-card red"><div class="lbl">รวมทั้งหมด</div><div class="val" id="d-total">—</div><div class="sub">รายการ</div></div>
+  </div>
+
+  <!-- สรุปเพิ่มเติม -->
+  <div class="stat-grid">
+    <div class="stat-card blue"><div class="lbl">ท่อ O₂ รวม</div><div class="val" id="dx-o2tot">—</div><div class="sub">ถัง</div></div>
+    <div class="stat-card blue"><div class="lbl">ท่อแก๊สอื่นรวม</div><div class="val" id="dx-gastot">—</div><div class="sub">ถัง</div></div>
+    <div class="stat-card blue"><div class="lbl">ยืมอุปกรณ์รวม</div><div class="val" id="dx-loantot">—</div><div class="sub">ชิ้น</div></div>
+    <div class="stat-card green"><div class="lbl">อัตราเสร็จ</div><div class="val" id="dx-rate">—</div><div class="sub" id="dx-rate-sub">&nbsp;</div><div class="dx-ring"><div id="dx-rate-bar"></div></div></div>
+    <div class="stat-card yellow"><div class="lbl">เวลาตอบสนองเฉลี่ย</div><div class="val" id="dx-resp">—</div><div class="sub" id="dx-resp-sub">แจ้ง → เสร็จ</div></div>
+    <div class="stat-card yellow"><div class="lbl">เวลาให้บริการเฉลี่ย/งาน</div><div class="val" id="dx-dur">—</div><div class="sub" id="dx-dur-sub">เริ่ม → สิ้นสุด</div></div>
+    <div class="stat-card red"><div class="lbl">งานค้างเกิน 3 วัน</div><div class="val" id="dx-over3">—</div><div class="sub">ยังไม่เสร็จ</div></div>
+    <div class="stat-card red"><div class="lbl">งานค้างเกิน 7 วัน</div><div class="val" id="dx-over7">—</div><div class="sub">ยังไม่เสร็จ</div></div>
   </div>
 
   <!-- chart grid ขยายเป็น 3 คอลัมน์ -->
@@ -885,6 +913,16 @@ body{font-family:var(--font);background:var(--bg-base);color:var(--text-1);min-h
     <div class="chart-card"><h3>🔧 แจ้งซ่อม Pipeline</h3><div class="bar-list" id="dash-repair-bars"><div style="color:var(--text-3);font-size:12px">กำลังโหลด...</div></div></div>
     <div class="chart-card"><h3>📊 สรุปประเภทบริการ</h3><div class="bar-list" id="dash-type-bars"><div style="color:var(--text-3);font-size:12px">กำลังโหลด...</div></div></div>
     <div class="chart-card"><h3>➕ รายการอื่นๆ</h3><div class="bar-list" id="dash-other-bars"><div style="color:var(--text-3);font-size:12px">กำลังโหลด...</div></div></div>
+  </div>
+  <div class="chart-grid" style="margin-top:14px">
+    <div class="chart-card" style="grid-column:1/-1">
+      <h3 style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span>📈 แนวโน้มจำนวนคำร้อง</span>
+        <select class="form-select" id="dash-trend-gran" onchange="dxRenderTrend()" style="width:auto;padding:4px 8px;font-size:12px"><option value="auto">อัตโนมัติ</option><option value="day">รายวัน</option><option value="week">รายสัปดาห์</option><option value="month">รายเดือน</option></select></h3>
+      <div id="dash-trend"><div style="color:var(--text-3);font-size:12px">กำลังโหลด...</div></div></div>
+    <div class="chart-card"><h3>👷 ภาระงานรายช่าง</h3><div class="bar-list" id="dash-tech-bars"><div style="color:var(--text-3);font-size:12px">กำลังโหลด...</div></div></div>
+    <div class="chart-card"><h3>⚖️ จ่ายจริง เทียบกับที่ขอ</h3><div id="dash-actual"><div style="color:var(--text-3);font-size:12px">กำลังโหลด...</div></div></div>
+    <div class="chart-card"><h3>📅 คำร้องตามวันในสัปดาห์</h3><div id="dash-weekday"><div style="color:var(--text-3);font-size:12px">กำลังโหลด...</div></div></div>
+    <div class="chart-card"><h3>🕐 คำร้องตามชั่วโมงที่บันทึก</h3><div id="dash-hour"><div style="color:var(--text-3);font-size:12px">กำลังโหลด...</div></div></div>
   </div>
 </div>
 
@@ -1106,6 +1144,7 @@ body{font-family:var(--font);background:var(--bg-base);color:var(--text-1);min-h
     <button class="dp-close" onclick="closeDetail()">✕</button>
     <h2 id="dp-title">รายละเอียด</h2>
     <div id="dp-badge" style="margin:6px 0 4px"></div>
+    <button class="btn btn-outline btn-sm" style="margin:4px 0 6px" onclick="printDetail()">🖨️ พิมพ์ / บันทึก PDF</button>
     <div id="dp-content"></div>
   </div>
 </div>
@@ -1174,6 +1213,17 @@ async function supaFetch(method, params='', body=null, tbl=TABLE) {
   return res.json();
 }
 
+// ดึงข้อมูลทั้งหมดแบบแบ่งหน้า (PostgREST จำกัด 1,000 แถว/ครั้ง) — ใช้กับ Dashboard
+async function supaFetchAll(params='', pageSize=1000, maxRows=50000) {
+  let out = [];
+  for (let off = 0; off < maxRows; off += pageSize) {
+    const rows = await supaFetch('GET', `${params}&order=id.asc&limit=${pageSize}&offset=${off}`) || [];
+    out = out.concat(rows);
+    if (rows.length < pageSize) break;
+  }
+  return out;
+}
+
 // ===== AUTH LOGIN =====
 async function doLogin() {
   const email = document.getElementById('auth-email').value.trim();
@@ -1211,6 +1261,7 @@ async function doLogin() {
 async function doLogout() {
   await supaSignOut();
   currentToken = null; currentSession = null; adminUnlocked = false;
+  const _ob = document.getElementById('nav-overdue'); if (_ob) _ob.classList.add('hidden');
   document.getElementById('auth-screen').classList.remove('hidden');
   document.getElementById('app').style.display = 'none';
   document.getElementById('auth-email').value = '';
@@ -1261,6 +1312,7 @@ function showPage(id) {
   if (id === 'service')   loadPendingList();
   if (id === 'history')   { setDatePreset('month','hist'); loadHistory(); }
   if (id === 'dashboard') { setDatePreset('month','dash'); loadDashboard(); }
+  refreshOverdueBadge();
 }
 
 // ===== TOAST =====
@@ -1785,14 +1837,14 @@ async function loadDashboard() {
   const gasItem  = document.getElementById('dash-gas-item').value;
   const loanItem = document.getElementById('dash-loan-item').value;
 
-  let params = '?select=status,department,o2_05q,o2_07q,o2_15q,o2_6q,o2_7q,o2_other_qty,o2_other_size,co2_6kg,co2_25kg,n2o_25kg,n2_7q,loan_flowmeter,loan_flowmeter_pto,repair_medical_air,repair_oxygen,repair_vacuum,other_gas_other_qty,other_gas_other_detail,loan_other_qty,loan_other_detail,general_other,general_other_detail,request_date';
+  let params = '?select=status,department,o2_05q,o2_07q,o2_15q,o2_6q,o2_7q,o2_other_qty,o2_other_size,co2_6kg,co2_25kg,n2o_25kg,n2_7q,loan_flowmeter,loan_flowmeter_pto,repair_medical_air,repair_oxygen,repair_vacuum,other_gas_other_qty,other_gas_other_detail,loan_other_qty,loan_other_detail,general_other,general_other_detail,request_date,created_at,requester_name,technician_name,service_start_at,service_end_at,custom_items_json,actual_o2_05q,actual_o2_07q,actual_o2_15q,actual_o2_6q,actual_o2_7q,actual_o2_other_qty,actual_co2_6kg,actual_co2_25kg,actual_n2o_25kg,actual_n2_7q,actual_loan_flowmeter,actual_loan_flowmeter_pto';
   if (from)    params += `&request_date=gte.${from}`;
   if (to)      params += `&request_date=lte.${to}`;
   if (statusV) params += `&status=eq.${statusV}`;
   if (deptV)   params += `&department=ilike.*${encodeURIComponent(deptV)}*`;
 
   try {
-    let all = await supaFetch('GET', params);
+    let all = await supaFetchAll(params);
 
     // filter อาคาร
     if (bldg && BUILDING_DEPTS[bldg]) all = all.filter(r => BUILDING_DEPTS[bldg].includes(r.department));
@@ -1877,6 +1929,9 @@ async function loadDashboard() {
       {label:'เรื่องอื่นๆ',  val:all.filter(r=>r.general_other).length},
     ].filter(d=>d.val>0), 'p', 'dashClickType');
 
+    // ส่วนเสริม (แยก try/catch ในตัว — ไม่กระทบกราฟเดิม)
+    renderDashExtras(all);
+
     // stat cards clickable — ใส่ tooltip และ cursor
     ['d-pending','d-inprog','d-done','d-total'].forEach((id,i) => {
       const card = document.getElementById(id)?.closest('.stat-card');
@@ -1903,6 +1958,184 @@ function renderBarList(containerId, data, colorClass='', onClickFn=null) {
       <div class="bar-track"><div class="bar-fill ${colorClass}" style="width:${Math.round(d.val/max*100)}%"></div></div>
     </div>`;
   }).join('');
+}
+
+// ===== DASHBOARD EXTRAS (เพิ่มเติม — ไม่แตะ logic เดิม) =====
+const DX_KEYS = [
+  ['o2_05q','O₂ 0.5Q'],['o2_07q','O₂ 0.7Q'],['o2_15q','O₂ 1.5Q'],['o2_6q','O₂ 6Q'],['o2_7q','O₂ 7Q'],['o2_other_qty','O₂ อื่นๆ'],
+  ['co2_6kg','CO₂ 6Kg'],['co2_25kg','CO₂ 25Kg'],['n2o_25kg','N₂O 25Kg'],['n2_7q','N₂ 7Q'],
+  ['loan_flowmeter','Flowmeter'],['loan_flowmeter_pto','Flowmeter+PTO']
+];
+const DX_TH_MONTH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+let _dashRows = [];
+
+function dxEsc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function dxPad(n){ return String(n).padStart(2,'0'); }
+function dxParseDate(s){ const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(s||''); return m ? new Date(+m[1],+m[2]-1,+m[3]) : null; }
+function dxFmtDur(min){ if(min==null||isNaN(min)) return '—'; return min<60 ? Math.round(min)+' นาที' : (min/60).toFixed(1)+' ชม.'; }
+function dxFmtDT(s){ if(!s) return ''; const d=new Date(s); if(isNaN(d)) return ''; return `${d.getFullYear()}-${dxPad(d.getMonth()+1)}-${dxPad(d.getDate())} ${dxPad(d.getHours())}:${dxPad(d.getMinutes())}`; }
+function dxSet(id,txt){ const el=document.getElementById(id); if(el) el.textContent=txt; }
+
+function dxColChart(id, items){
+  const el=document.getElementById(id); if(!el) return;
+  if(!items.length || !items.some(i=>i.val>0)){ el.innerHTML='<div style="color:var(--text-3);font-size:12px">ไม่มีข้อมูล</div>'; return; }
+  const max=Math.max(...items.map(i=>i.val));
+  el.innerHTML='<div class="col-chart">'+items.map(i=>
+    `<div class="col" title="${dxEsc(i.title||i.label)}: ${i.val}"><div class="v">${i.val||''}</div><div class="b" style="height:${i.val?Math.max(4,Math.round(i.val/max*100)):2}px"></div><div class="l">${dxEsc(i.label)}</div></div>`
+  ).join('')+'</div>';
+}
+
+function dxRenderTrend(){
+  const el=document.getElementById('dash-trend'); if(!el) return;
+  const dates=_dashRows.map(r=>dxParseDate(r.request_date)).filter(Boolean);
+  if(!dates.length){ el.innerHTML='<div style="color:var(--text-3);font-size:12px">ไม่มีข้อมูล</div>'; return; }
+  const min=new Date(Math.min(...dates)), max=new Date(Math.max(...dates));
+  const span=Math.round((max-min)/864e5)+1;
+  let gran=document.getElementById('dash-trend-gran')?.value||'auto';
+  if(gran==='auto') gran = span<=35 ? 'day' : span<=180 ? 'week' : 'month';
+  if(gran==='day' && span>400) gran='month';
+  const mondayOf=d=>new Date(d.getFullYear(),d.getMonth(),d.getDate()-((d.getDay()+6)%7));
+  const keyOf=d=>{
+    if(gran==='day')  return `${d.getFullYear()}-${dxPad(d.getMonth()+1)}-${dxPad(d.getDate())}`;
+    if(gran==='week'){ const m=mondayOf(d); return `${m.getFullYear()}-${dxPad(m.getMonth()+1)}-${dxPad(m.getDate())}`; }
+    return `${d.getFullYear()}-${dxPad(d.getMonth()+1)}`;
+  };
+  const counts={}; dates.forEach(d=>{ const k=keyOf(d); counts[k]=(counts[k]||0)+1; });
+  const items=[];
+  let cur = gran==='week' ? mondayOf(min) : gran==='month' ? new Date(min.getFullYear(),min.getMonth(),1) : new Date(min);
+  let guard=0;
+  while(cur<=max && guard++<1000){
+    const k=keyOf(cur);
+    let label, title;
+    if(gran==='month'){ label=`${DX_TH_MONTH[cur.getMonth()]} ${String(cur.getFullYear()+543).slice(2)}`; title=`${DX_TH_MONTH[cur.getMonth()]} ${cur.getFullYear()+543}`; }
+    else { label=`${cur.getDate()}/${cur.getMonth()+1}`; title=(gran==='week'?'สัปดาห์เริ่ม ':'')+`${cur.getDate()}/${cur.getMonth()+1}/${cur.getFullYear()+543}`; }
+    items.push({label,title,val:counts[k]||0});
+    cur = gran==='month' ? new Date(cur.getFullYear(),cur.getMonth()+1,1)
+        : new Date(cur.getFullYear(),cur.getMonth(),cur.getDate()+(gran==='week'?7:1));
+  }
+  dxColChart('dash-trend', items);
+}
+
+function renderDashExtras(all){
+  try {
+    _dashRows = all;
+    const sum=(ks)=>all.reduce((s,r)=>s+ks.reduce((q,k)=>q+(r[k]||0),0),0);
+    dxSet('dx-o2tot',  sum(['o2_05q','o2_07q','o2_15q','o2_6q','o2_7q','o2_other_qty']));
+    dxSet('dx-gastot', sum(['co2_6kg','co2_25kg','n2o_25kg','n2_7q','other_gas_other_qty']));
+    dxSet('dx-loantot',sum(['loan_flowmeter','loan_flowmeter_pto','loan_other_qty']));
+
+    // อัตราเสร็จ
+    const done=all.filter(r=>r.status==='done').length;
+    const rate=all.length ? Math.round(done/all.length*100) : 0;
+    dxSet('dx-rate', all.length ? rate+'%' : '—');
+    dxSet('dx-rate-sub', all.length ? `เสร็จ ${done} จาก ${all.length}` : '');
+    const bar=document.getElementById('dx-rate-bar'); if(bar) bar.style.width=rate+'%';
+
+    // เวลาตอบสนอง (แจ้ง → เสร็จ)
+    let rs=0, rc=0;
+    all.forEach(r=>{
+      if(r.status!=='done'||!r.service_end_at) return;
+      const d0=dxParseDate(r.request_date), d1=new Date(r.service_end_at);
+      if(!d0||isNaN(d1)) return;
+      rs+=Math.max(0,(d1-d0)/864e5); rc++;
+    });
+    dxSet('dx-resp', rc ? (rs/rc).toFixed(1)+' วัน' : '—');
+    dxSet('dx-resp-sub', rc ? `จากงานที่เสร็จ ${rc} รายการ` : 'แจ้ง → เสร็จ');
+
+    // เวลาให้บริการเฉลี่ย (เริ่ม → สิ้นสุด)
+    let ds=0, dc=0;
+    all.forEach(r=>{
+      if(!r.service_start_at||!r.service_end_at) return;
+      const m=(new Date(r.service_end_at)-new Date(r.service_start_at))/60000;
+      if(isFinite(m)&&m>0){ ds+=m; dc++; }
+    });
+    dxSet('dx-dur', dc ? dxFmtDur(ds/dc) : '—');
+    dxSet('dx-dur-sub', dc ? `จาก ${dc} รายการ` : 'เริ่ม → สิ้นสุด');
+
+    // งานค้าง
+    const t0=new Date(); const today=new Date(t0.getFullYear(),t0.getMonth(),t0.getDate());
+    let o3=0,o7=0;
+    all.forEach(r=>{
+      if(r.status==='done') return;
+      const d0=dxParseDate(r.request_date); if(!d0) return;
+      const age=Math.floor((today-d0)/864e5);
+      if(age>3) o3++; if(age>7) o7++;
+    });
+    dxSet('dx-over3', o3); dxSet('dx-over7', o7);
+
+    // แนวโน้ม
+    dxRenderTrend();
+
+    // วันในสัปดาห์ (จันทร์ → อาทิตย์)
+    const wdNames=['อา','จ','อ','พ','พฤ','ศ','ส']; const wd=[0,0,0,0,0,0,0];
+    all.forEach(r=>{ const d=dxParseDate(r.request_date); if(d) wd[d.getDay()]++; });
+    dxColChart('dash-weekday',[1,2,3,4,5,6,0].map(i=>({label:wdNames[i],val:wd[i]})));
+
+    // ชั่วโมง (จากเวลาที่บันทึกในระบบ)
+    const hr=new Array(24).fill(0);
+    all.forEach(r=>{ if(!r.created_at) return; const d=new Date(r.created_at); if(!isNaN(d)) hr[d.getHours()]++; });
+    dxColChart('dash-hour', hr.map((v,h)=>({label:String(h),val:v,title:`${h}:00-${h}:59 น.`})));
+
+    // ภาระงานรายช่าง
+    const tech={};
+    all.forEach(r=>{
+      const n=(r.technician_name||'').trim(); if(!n) return;
+      const o=tech[n]||(tech[n]={total:0,done:0,mins:0,mc:0});
+      o.total++; if(r.status==='done') o.done++;
+      if(r.service_start_at&&r.service_end_at){
+        const m=(new Date(r.service_end_at)-new Date(r.service_start_at))/60000;
+        if(isFinite(m)&&m>0){ o.mins+=m; o.mc++; }
+      }
+    });
+    renderBarList('dash-tech-bars', Object.entries(tech).sort((a,b)=>b[1].total-a[1].total).map(([n,o])=>({
+      label:`${dxEsc(n)} · เสร็จ ${o.done}/${o.total}${o.mc?' · เฉลี่ย '+dxFmtDur(o.mins/o.mc):''}`,
+      val:o.total,
+      key:encodeURIComponent(n).replace(/'/g,'%27')
+    })), 'g', 'dashClickTech');
+
+    // จ่ายจริง vs ขอ (เฉพาะใบที่บันทึกจำนวนจ่ายจริงแล้ว)
+    let body='';
+    DX_KEYS.forEach(([k,lb])=>{
+      let req=0,act=0,n=0;
+      all.forEach(r=>{ const a=r['actual_'+k]; if(a!=null){ n++; act+=a||0; req+=r[k]||0; } });
+      if(!n || (req===0&&act===0)) return;
+      const d=act-req;
+      const col=d===0?'var(--green)':d<0?'var(--yellow)':'var(--cyan)';
+      body+=`<tr><td>${dxEsc(lb)}</td><td>${req}</td><td>${act}</td><td style="color:${col};font-weight:700">${d>0?'+':''}${d}</td></tr>`;
+    });
+    const act=document.getElementById('dash-actual');
+    if(act) act.innerHTML = body
+      ? `<table class="dx-table"><thead><tr><th>รายการ</th><th>ขอ</th><th>จ่ายจริง</th><th>ส่วนต่าง</th></tr></thead><tbody>${body}</tbody></table><div class="dx-note">นับเฉพาะใบที่บันทึกจำนวนจ่ายจริงแล้ว</div>`
+      : '<div style="color:var(--text-3);font-size:12px">ไม่มีข้อมูล</div>';
+  } catch(e) { console.warn('[DashExtras]', e); }
+}
+
+function exportDashCSV(){
+  if(!_dashRows.length){ toast('ไม่มีข้อมูลให้ Export — กด "แสดงผล" ก่อน','error'); return; }
+  const stMap={pending:'รอดำเนินการ',in_progress:'กำลังดำเนินการ',done:'เสร็จสิ้น'};
+  const head=['วันที่แจ้ง','ผู้แจ้ง','แผนก','สถานะ','รายการ','ช่าง','เริ่มให้บริการ','สิ้นสุด',
+    ...DX_KEYS.map(([,l])=>'ขอ '+l), ...DX_KEYS.map(([,l])=>'จ่ายจริง '+l)];
+  const cell=v=>{
+    if(v==null) return '""';
+    if(typeof v==='number') return String(v);
+    let t=String(v); if(/^[=+\-@\t\r]/.test(t)) t="'"+t;
+    return '"'+t.replace(/"/g,'""')+'"';
+  };
+  const rows=_dashRows.map(r=>{
+    let items=''; try{ items=getSummaryItemsFull(r); }catch(e){}
+    return [r.request_date, r.requester_name, r.department, stMap[r.status]||r.status, items,
+      r.technician_name, dxFmtDT(r.service_start_at), dxFmtDT(r.service_end_at),
+      ...DX_KEYS.map(([k])=>r[k]||0),
+      ...DX_KEYS.map(([k])=>r['actual_'+k]!=null?r['actual_'+k]:'')].map(cell).join(',');
+  });
+  const csv='﻿'+head.map(cell).join(',')+'\r\n'+rows.join('\r\n');
+  const d=new Date();
+  const name=`gasmed_dashboard_${d.getFullYear()}${dxPad(d.getMonth()+1)}${dxPad(d.getDate())}.csv`;
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download=name; document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },1000);
+  toast(`Export ${_dashRows.length} รายการแล้ว`,'success');
 }
 
 // ===== UTIL =====
@@ -2233,7 +2466,7 @@ async function previewArchive() {
   try {
     let params = `?request_date=lt.${cutoff}&select=id`;
     if (statusF) params += `&status=eq.${statusF}`;
-    const data = await supaFetch('GET', params);
+    const data = await supaFetchAll(params);
     const count = data ? data.length : 0;
 
     if (count === 0) {
@@ -2271,23 +2504,19 @@ async function runArchive() {
         // 1. ดึงข้อมูลที่จะ archive
         let params = `?request_date=lt.${cutoff}`;
         if (statusF) params += `&status=eq.${statusF}`;
-        const rows = await supaFetch('GET', params);
+        const rows = await supaFetchAll(params);
         if (!rows || !rows.length) { toast('ไม่มีรายการ', 'info'); return; }
 
-        // 2. เพิ่ม archived_at แต่ละ row แล้ว insert ไป archive table
-        const archiveRows = rows.map(r => ({ ...r, archived_at: new Date().toISOString(), id: undefined }));
-        // insert ทีละ batch 50
-        const BATCH = 50;
+        // 2-3. ย้ายเป็นชุดละ 100: insert ไป archive แล้วลบชุดนั้นทันที (ถ้าหยุดกลางคัน ไม่เกิดข้อมูลซ้ำ)
+        const archivedAt = new Date().toISOString();
+        const CHUNK = 100;
         let inserted = 0;
-        for (let i = 0; i < archiveRows.length; i += BATCH) {
-          const batch = archiveRows.slice(i, i + BATCH);
-          await supaFetchArchive('POST', '', batch);
-          inserted += batch.length;
+        for (let i = 0; i < rows.length; i += CHUNK) {
+          const chunk = rows.slice(i, i + CHUNK);
+          await supaFetchArchive('POST', '', chunk.map(r => ({ ...r, archived_at: archivedAt, id: undefined })));
+          await supaFetch('DELETE', `?id=in.(${chunk.map(r => r.id).join(',')})`);
+          inserted += chunk.length;
         }
-
-        // 3. ลบออกจากตารางหลัก (ใช้ id list)
-        const ids = rows.map(r => r.id);
-        await supaFetch('DELETE', `?id=in.(${ids.join(',')})`);
 
         previewText.innerHTML = `<span style="color:var(--green)">✅ Archive สำเร็จ — ย้าย ${inserted} รายการ ไปยังตาราง Archive แล้ว</span>`;
         toast(`Archive ${inserted} รายการสำเร็จ ✅`, 'success');
@@ -2518,6 +2747,7 @@ function dashClickDept(dept) {
   const deptEl = document.getElementById('hist-dept');
   if (deptEl) deptEl.value = dept === 'ทั้งหมด' ? '' : dept;
   // reset filter อื่น
+  const _teD = document.getElementById('hist-tech'); if (_teD) _teD.value = '';
   document.getElementById('hist-building').value  = '';
   document.getElementById('hist-svctype').value   = '';
   document.getElementById('hist-o2-item').value   = '';
@@ -2616,10 +2846,22 @@ function dashClickStatus(status) {
 }
 
 function _copyDashDateToHist() {
+  const _te = document.getElementById('hist-tech'); if (_te) _te.value = '';
   const df = document.getElementById('dash-date-from').value;
   const dt = document.getElementById('dash-date-to').value;
   if (df) document.getElementById('hist-date-from').value = df;
   if (dt) document.getElementById('hist-date-to').value   = dt;
+}
+
+function dashClickTech(key) {
+  let name = key; try { name = decodeURIComponent(key); } catch(e) {}
+  showPage('history');
+  _copyDashDateToHist();
+  const t = document.getElementById('hist-tech'); if (t) t.value = name;
+  ['hist-svctype','hist-o2-item','hist-gas-item','hist-loan-item','hist-building','hist-status','hist-dept'].forEach(id => {
+    const e = document.getElementById(id); if (e) e.value = '';
+  });
+  loadHistory();
 }
 
 // ===== SUPABASE KEEPALIVE (ป้องกัน project pause) =====
@@ -2664,8 +2906,81 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // โหลด tech datalist + custom items หลัง login สำเร็จ (เรียกจาก doLogin)
+// ===== PRINT / PDF + OVERDUE BADGE (เพิ่มเติม) =====
+function printHtmlDoc(title, bodyHtml) {
+  const w = window.open('', '_blank');
+  if (!w) { toast('เบราว์เซอร์บล็อกหน้าต่างพิมพ์ — กรุณาอนุญาต pop-up', 'error'); return; }
+  const css = Array.from(document.querySelectorAll('style')).map(x => x.textContent).join('\n');
+  w.document.open();
+  w.document.write(`<!DOCTYPE html><html lang="th" data-theme="light"><head><meta charset="UTF-8"><title>${dxEsc(title)}</title>
+<style>${css}</style>
+<style>
+html,body{background:#fff!important;height:auto!important;overflow:visible!important}
+body{padding:18px;color:#111}
+*{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.pr-head{border-bottom:2px solid #333;padding-bottom:8px;margin-bottom:14px}
+.pr-head h1{font-size:18px;margin:0 0 2px}.pr-head p{font-size:12px;margin:0;color:#444}
+.pr-sign{display:flex;gap:40px;margin-top:38px;font-size:12px}
+.pr-sign div{flex:1;text-align:center;border-top:1px solid #333;padding-top:6px}
+.stat-card,.chart-card,.dp-section{break-inside:avoid}
+.page{display:block!important}
+@media print{.no-print{display:none!important}}
+</style></head><body>${bodyHtml}</body></html>`);
+  w.document.close();
+  setTimeout(() => { try { w.focus(); w.print(); } catch(e) {} }, 500);
+}
+
+function printDetail() {
+  const content = document.getElementById('dp-content');
+  if (!content || !content.querySelector('.dp-section')) { toast('ยังไม่มีข้อมูลให้พิมพ์', 'error'); return; }
+  const title = document.getElementById('dp-title').textContent;
+  const badge = document.getElementById('dp-badge').innerHTML;
+  const now = new Date().toLocaleString('th-TH', {dateStyle:'medium', timeStyle:'short'});
+  printHtmlDoc(title, `<div class="pr-head"><h1>งานบริการระบบแก๊สทางการแพทย์ — ${dxEsc(title)}</h1><p>พิมพ์เมื่อ ${dxEsc(now)}</p></div>
+<div style="margin-bottom:8px">${badge}</div>${content.innerHTML}
+<div class="pr-sign"><div>ผู้แจ้ง</div><div>ผู้ให้บริการ</div><div>ผู้ตรวจรับ</div></div>`);
+}
+
+function printDashboard() {
+  const page = document.getElementById('page-dashboard');
+  if (!page || !_dashRows.length) { toast('ไม่มีข้อมูล — กด "แสดงผล" ก่อนพิมพ์', 'error'); return; }
+  const clone = page.cloneNode(true);
+  clone.querySelectorAll('.card, .page-header, select, button, [id]').forEach(el => {
+    if (el.matches('.card, .page-header, button')) el.remove();
+    else if (el.tagName === 'SELECT') el.remove();
+    else el.removeAttribute('id');
+  });
+  const val = id => document.getElementById(id)?.value || '';
+  const sel = id => { const e = document.getElementById(id); return e && e.value ? e.options[e.selectedIndex].text : ''; };
+  const f = val('dash-date-from'), t = val('dash-date-to');
+  const parts = [`ช่วงวันที่: ${f ? formatDate(f) : 'ทั้งหมด'}${t ? ' – ' + formatDate(t) : ''}`,
+    sel('dash-status') && 'สถานะ: ' + sel('dash-status'), sel('dash-building') && 'อาคาร: ' + sel('dash-building'),
+    sel('dash-svctype') && 'ประเภท: ' + sel('dash-svctype'), val('dash-dept').trim() && 'แผนก: ' + val('dash-dept').trim()].filter(Boolean);
+  const now = new Date().toLocaleString('th-TH', {dateStyle:'medium', timeStyle:'short'});
+  printHtmlDoc('รายงานสรุป Dashboard', `<div class="pr-head"><h1>รายงานสรุปการให้บริการ — งานบริการระบบแก๊สทางการแพทย์</h1><p>${dxEsc(parts.join(' | '))}</p><p>พิมพ์เมื่อ ${dxEsc(now)} · ทั้งหมด ${_dashRows.length} รายการ</p></div>${clone.innerHTML}`);
+}
+
+let _overdueLast = 0;
+async function refreshOverdueBadge(force) {
+  const el = document.getElementById('nav-overdue');
+  if (!el || !currentToken) return;
+  if (!force && Date.now() - _overdueLast < 30000) return;
+  _overdueLast = Date.now();
+  try {
+    const d = new Date(); d.setDate(d.getDate() - 3);
+    const cutoff = `${d.getFullYear()}-${dxPad(d.getMonth()+1)}-${dxPad(d.getDate())}`;
+    const rows = await supaFetchAll(`?select=id&status=in.(pending,in_progress)&request_date=lt.${cutoff}`);
+    const n = rows.length;
+    el.textContent = n > 99 ? '99+' : n;
+    el.title = `งานค้างเกิน 3 วัน ${n} รายการ`;
+    el.classList.toggle('hidden', n === 0);
+  } catch(e) { console.warn('[OverdueBadge]', e.message); }
+}
+setInterval(() => refreshOverdueBadge(), 10 * 60 * 1000);
+
 async function postLoginInit() {
   await Promise.all([refreshTechDatalist(), loadCustomItems()]);
+  refreshOverdueBadge(true);
 }
 </script>
 </body>
