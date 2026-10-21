@@ -939,6 +939,7 @@ body{font-family:var(--font);background:var(--bg-base);color:var(--text-1);min-h
     <button class="admin-tab" onclick="switchAdminTab('techs',this)">👷 ชื่อช่าง Preset</button>
     <button class="admin-tab" onclick="switchAdminTab('archive',this)">📦 Archive ข้อมูล</button>
     <button class="admin-tab" onclick="switchAdminTab('ping',this)">🔌 สถานะระบบ</button>
+    <button class="admin-tab" onclick="switchAdminTab('backup',this)" id="admin-tab-backup">💾 สำรองข้อมูล</button>
   </div>
 
   <!-- TAB: จัดการรายการ -->
@@ -1072,6 +1073,17 @@ body{font-family:var(--font);background:var(--bg-base);color:var(--text-1);min-h
       <div id="archive-list-wrap">
         <div style="font-size:13px;color:var(--text-3);padding:8px 0">กด "โหลด" เพื่อดูข้อมูลใน Archive</div>
       </div>
+    </div>
+  </div>
+
+  <!-- TAB: สำรองข้อมูล -->
+  <div class="admin-tab-panel" id="atab-backup">
+    <div class="card admin-card">
+      <div class="card-title"><div class="card-title-l">💾 สำรองข้อมูลทั้งหมดเป็น Excel</div></div>
+      <p style="font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:12px">Supabase แผน Free ไม่มี backup อัตโนมัติ — แนะนำให้กดสำรองอย่างน้อยสัปดาห์ละครั้ง แล้วเก็บไฟล์ไว้ในที่ปลอดภัย ไฟล์ประกอบด้วย 4 ชีต: ข้อมูลหลัก, Archive, ช่าง Preset, รายการพิเศษ (หัวคอลัมน์ตรงกับชื่อคอลัมน์ในฐานข้อมูล เพื่อใช้กู้คืนได้)</p>
+      <div id="backup-status" style="font-size:13px;margin-bottom:14px;padding:10px 14px;background:var(--bg-card2);border-radius:var(--radius)">—</div>
+      <button class="btn btn-primary" id="btn-backup" onclick="runBackupXlsx()">⬇️ สำรองข้อมูลทั้งหมด (Excel)</button>
+      <div id="backup-result" style="font-size:12px;color:var(--text-3);margin-top:12px;line-height:1.6"></div>
     </div>
   </div>
 
@@ -2193,6 +2205,7 @@ function switchAdminTab(tab, btn) {
   if (tab === 'techs')   { renderTechTags(); loadCustomItemsAdmin(); }
   if (tab === 'ping')    runPing();
   if (tab === 'archive') document.getElementById('btn-run-archive').disabled = true;
+  if (tab === 'backup')  updateBackupStatus();
 }
 
 // ===== B+ CUSTOM ITEMS (F1) =====
@@ -2978,9 +2991,94 @@ async function refreshOverdueBadge(force) {
 }
 setInterval(() => refreshOverdueBadge(), 10 * 60 * 1000);
 
+// ===== BACKUP ทั้งหมดเป็น Excel (เพิ่มเติม) =====
+const BACKUP_KEY = 'gasmed_backup_last';
+const BACKUP_WARN_DAYS = 7;
+
+function backupDaysSince() {
+  let v = null; try { v = localStorage.getItem(BACKUP_KEY); } catch(e) {}
+  if (!v) return null;
+  const d = new Date(v); if (isNaN(d)) return null;
+  return { date: d, days: Math.floor((Date.now() - d.getTime()) / 864e5) };
+}
+
+function updateBackupStatus() {
+  const st = backupDaysSince();
+  const overdue = !st || st.days >= BACKUP_WARN_DAYS;
+  const el = document.getElementById('backup-status');
+  if (el) {
+    el.innerHTML = st
+      ? `สำรองล่าสุด: <b>${dxEsc(st.date.toLocaleString('th-TH',{dateStyle:'medium',timeStyle:'short'}))}</b> (${st.days === 0 ? 'วันนี้' : st.days + ' วันที่แล้ว'})` + (overdue ? ` <span style="color:var(--red);font-weight:700">⚠️ ควรสำรองใหม่</span>` : ` <span style="color:var(--green)">✓</span>`)
+      : `<span style="color:var(--red);font-weight:700">⚠️ ยังไม่เคยสำรองข้อมูลจากเครื่องนี้</span>`;
+  }
+  const tab = document.getElementById('admin-tab-backup');
+  if (tab) tab.textContent = overdue ? '💾 สำรองข้อมูล ⚠️' : '💾 สำรองข้อมูล';
+}
+
+function loadXlsxLib() {
+  return new Promise((resolve, reject) => {
+    if (window.XLSX) return resolve();
+    const sc = document.createElement('script');
+    sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    sc.onload = () => resolve();
+    sc.onerror = () => reject(new Error('โหลดตัวสร้างไฟล์ Excel ไม่สำเร็จ — ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่'));
+    document.head.appendChild(sc);
+  });
+}
+
+async function backupFetchTable(tbl) {
+  let out = [];
+  for (let off = 0; off < 200000; off += 1000) {
+    const rows = await supaFetch('GET', `?select=*&order=id.asc&limit=1000&offset=${off}`, null, tbl) || [];
+    out = out.concat(rows);
+    if (rows.length < 1000) break;
+  }
+  return out;
+}
+
+async function runBackupXlsx() {
+  const btn = document.getElementById('btn-backup');
+  const res = document.getElementById('backup-result');
+  btn.disabled = true;
+  res.textContent = 'กำลังดึงข้อมูลและสร้างไฟล์...';
+  try {
+    await loadXlsxLib();
+    const targets = [
+      { name: 'ข้อมูลหลัก',   tbl: TABLE,         must: true  },
+      { name: 'Archive',      tbl: ARCHIVE_TABLE, must: false },
+      { name: 'ช่าง Preset',  tbl: TECH_TBL,      must: false },
+      { name: 'รายการพิเศษ',  tbl: 'gas_custom_items', must: false }
+    ];
+    const wb = XLSX.utils.book_new();
+    const lines = [], failed = [];
+    for (const t of targets) {
+      try {
+        const rows = await backupFetchTable(t.tbl);
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), t.name);
+        lines.push(`${t.name}: ${rows.length} แถว`);
+      } catch(e) {
+        if (t.must) throw e;
+        failed.push(`${t.name} (${e.message})`);
+      }
+    }
+    const d = new Date();
+    const fname = `gasmed_backup_${d.getFullYear()}${dxPad(d.getMonth()+1)}${dxPad(d.getDate())}_${dxPad(d.getHours())}${dxPad(d.getMinutes())}.xlsx`;
+    XLSX.writeFile(wb, fname);
+    try { localStorage.setItem(BACKUP_KEY, d.toISOString()); } catch(e) {}
+    updateBackupStatus();
+    res.innerHTML = `✅ ดาวน์โหลด <b>${dxEsc(fname)}</b> แล้ว<br>${lines.map(dxEsc).join(' · ')}` +
+      (failed.length ? `<br><span style="color:var(--red)">⚠️ ชีตที่สำรองไม่ได้: ${failed.map(dxEsc).join(', ')}</span>` : '');
+    toast(failed.length ? 'สำรองข้อมูลแล้ว แต่บางชีตไม่สำเร็จ' : 'สำรองข้อมูลสำเร็จ ✅', failed.length ? 'error' : 'success');
+  } catch(err) {
+    res.innerHTML = `<span style="color:var(--red)">❌ สำรองไม่สำเร็จ: ${dxEsc(err.message)}</span>`;
+    toast('สำรองข้อมูลไม่สำเร็จ: ' + err.message, 'error');
+  } finally { btn.disabled = false; }
+}
+
 async function postLoginInit() {
   await Promise.all([refreshTechDatalist(), loadCustomItems()]);
   refreshOverdueBadge(true);
+  updateBackupStatus();
 }
 </script>
 </body>
