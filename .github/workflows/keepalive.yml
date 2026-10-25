@@ -11,8 +11,9 @@ jobs:
     steps:
       - name: Ping Supabase REST
         env:
-          SUPA_ANON: ${{ secrets.SUPA_ANON }}
+          SUPA_ANON: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImttdGV1eHB2cGNxY2hhY3BlZm15Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNTgwMDUsImV4cCI6MjA5NjkzNDAwNX0.HpVuvxq9Nx1flqWYzOuQ5_iB6I7DeBN_YxgfzIERvDc
         run: |
+          echo "key length: ${#SUPA_ANON}"
           code=$(curl -s -o /dev/null -w "%{http_code}" \
             "https://kmteuxpvpcqchacpefmy.supabase.co/rest/v1/exchang-repair-loan-gas-system?limit=1&select=id" \
             -H "apikey: $SUPA_ANON" -H "Authorization: Bearer $SUPA_ANON")
