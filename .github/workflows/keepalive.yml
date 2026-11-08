@@ -1,24 +1,35 @@
--- =====================================================
--- gas_keepalive: ตารางเล็ก 1 แถว ให้ keepalive "เขียน" จริงทุกวัน
--- รันใน Supabase Dashboard > SQL Editor (รันทีเดียวทั้งก้อนได้)
--- =====================================================
-CREATE TABLE IF NOT EXISTS public.gas_keepalive (
-  id        INT PRIMARY KEY,
-  pinged_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+name: Supabase Keepalive
 
-INSERT INTO public.gas_keepalive (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
+on:
+  schedule:
+    - cron: '17 2 * * *'     # ทุกวัน 02:17 UTC (09:17 น. ไทย)
+  workflow_dispatch:          # กดรันเองได้จากแท็บ Actions
 
-ALTER TABLE public.gas_keepalive ENABLE ROW LEVEL SECURITY;
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read + Write ping
+        env:
+          SUPA_ANON: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImttdGV1eHB2cGNxY2hhY3BlZm15Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNTgwMDUsImV4cCI6MjA5NjkzNDAwNX0.HpVuvxq9Nx1flqWYzOuQ5_iB6I7DeBN_YxgfzIERvDc
+        run: |
+          base="https://kmteuxpvpcqchacpefmy.supabase.co/rest/v1"
+          echo "key length: ${#SUPA_ANON}"
 
-DROP POLICY IF EXISTS keepalive_select ON public.gas_keepalive;
-CREATE POLICY keepalive_select ON public.gas_keepalive
-  FOR SELECT TO anon, authenticated USING (id = 1);
+          # 1) อ่านตารางหลัก
+          code=$(curl -s -o /dev/null -w "%{http_code}" \
+            "$base/exchang-repair-loan-gas-system?limit=1&select=id" \
+            -H "apikey: $SUPA_ANON" -H "Authorization: Bearer $SUPA_ANON")
+          echo "READ  HTTP $code"
+          [ "$code" = "200" ] || exit 1
 
-DROP POLICY IF EXISTS keepalive_update ON public.gas_keepalive;
-CREATE POLICY keepalive_update ON public.gas_keepalive
-  FOR UPDATE TO anon, authenticated USING (id = 1) WITH CHECK (id = 1);
-
--- สิทธิ์ (ต้องระบุเอง ตามกฎใหม่ของ Supabase) — anon แก้ได้เฉพาะแถว id=1 เท่านั้น
-GRANT SELECT, UPDATE ON public.gas_keepalive TO anon, authenticated;
-GRANT ALL ON public.gas_keepalive TO service_role;
+          # 2) เขียนจริง: อัปเดตแถวเดียวใน gas_keepalive
+          now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          out=$(curl -s -w "\n%{http_code}" -X PATCH "$base/gas_keepalive?id=eq.1" \
+            -H "apikey: $SUPA_ANON" -H "Authorization: Bearer $SUPA_ANON" \
+            -H "Content-Type: application/json" -H "Prefer: return=representation" \
+            -d "{\"pinged_at\":\"$now\"}")
+          code=$(echo "$out" | tail -n1)
+          body=$(echo "$out" | sed '$d')
+          echo "WRITE HTTP $code body: $body"
+          [ "$code" = "200" ] && echo "$body" | grep -q '"id":1'
