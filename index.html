@@ -1205,13 +1205,22 @@ const PAGE_SIZE = 20;
 
 // ===== SUPABASE AUTH =====
 async function supaAuth(email, password) {
-  const res = await fetch(`${SUPA_URL}/auth/v1/token?grant_type=password`, {
-    method: 'POST',
-    headers: { 'apikey': SUPA_ANON, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password })
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error_description || data.msg || 'Login ไม่สำเร็จ');
+  let res;
+  try {
+    res = await fetch(`${SUPA_URL}/auth/v1/token?grant_type=password`, {
+      method: 'POST',
+      headers: { 'apikey': SUPA_ANON, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+  } catch (e) {
+    throw new Error('เชื่อมต่อฐานข้อมูลไม่ได้ — ตรวจสอบอินเทอร์เน็ต หรือโปรเจกต์ Supabase อาจถูกพัก (Paused) กรุณาแจ้งผู้ดูแล');
+  }
+  let data = {};
+  try { data = await res.json(); } catch (e) {}
+  if (!res.ok) {
+    if (res.status >= 500) throw new Error(`ฐานข้อมูลไม่ตอบสนอง (HTTP ${res.status}) — โปรเจกต์ Supabase อาจถูกพัก (Paused) กรุณาแจ้งผู้ดูแลให้กด Restore project`);
+    throw new Error(data.error_description || data.msg || 'Login ไม่สำเร็จ');
+  }
   return data;
 }
 
@@ -2901,13 +2910,19 @@ const KEEPALIVE_KEY = 'gasmed_keepalive_last';
 
 async function supabaseKeepalive() {
   // ใช้ fetch ตรงๆ ด้วย anon key — ทำงานได้แม้ยังไม่ login
-  // ถ้า project pause อยู่ request นี้จะ wake it up อัตโนมัติ
+  // หมายเหตุ: ถ้า project ถูก pause แล้ว request นี้ปลุกไม่ได้ ต้องกด Restore ที่ Supabase Dashboard
   try {
     const res = await fetch(
       `${SUPA_URL}/rest/v1/${encodeURIComponent(TABLE)}?limit=1&select=id`,
       { headers: { 'apikey': SUPA_ANON, 'Authorization': `Bearer ${SUPA_ANON}` } }
     );
     const now = new Date().toISOString();
+    // เขียนจริงลงแถวเดียวของ gas_keepalive (ถ้ายังไม่ได้สร้างตาราง จะล้มเงียบๆ ไม่กระทบอะไร)
+    fetch(`${SUPA_URL}/rest/v1/gas_keepalive?id=eq.1`, {
+      method: 'PATCH',
+      headers: { 'apikey': SUPA_ANON, 'Authorization': `Bearer ${SUPA_ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ pinged_at: now })
+    }).catch(() => {});
     localStorage.setItem(KEEPALIVE_KEY, now);
     const status = res.ok ? 'OK' : `HTTP ${res.status}`;
     console.log(`[Keepalive] Supabase pinged at ${now} — ${status}`);
